@@ -1,0 +1,734 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <!-- Control Panel -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-play-circle"></i> Control Panel
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <button id="start-capture" class="btn btn-success btn-lg me-2">
+                            <i class="fas fa-play"></i> Start Capture
+                        </button>
+                        <button id="start-wlan-capture" class="btn btn-success btn-lg me-2">
+                            <i class="fas fa-wifi"></i> Start WLAN0
+                        </button>
+                        <button id="stop-capture" class="btn btn-danger btn-lg me-2">
+                            <i class="fas fa-stop"></i> Stop Capture
+                        </button>
+                        <button id="clear-alerts" class="btn btn-warning btn-lg me-2">
+                            <i class="fas fa-trash"></i> Clear Alerts
+                        </button>
+                        <button id="test-capture" class="btn btn-info btn-lg">
+                            <i class="fas fa-bug"></i> Test Capture
+                        </button>
+                        <div class="mt-2">
+                            <small class="text-muted">Interface: <span id="current-interface">-</span></small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="model-file" accept=".pkl">
+                            <button class="btn btn-primary" id="upload-model">
+                                <i class="fas fa-upload"></i> Upload Model
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Analysis Panel -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-csv"></i> CSV File Analysis
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="csv-file" accept=".csv">
+                            <button class="btn btn-success" id="upload-csv">
+                                <i class="fas fa-upload"></i> Upload & Analyze CSV
+                            </button>
+                        </div>
+                        <small class="text-muted">Upload a CSV file containing network flow data for batch analysis</small>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-info" id="view-csv-analyses">
+                            <i class="fas fa-history"></i> View Analysis History
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- CSV Analysis Status -->
+                <div id="csv-analysis-status" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> <span id="csv-status-text">Processing CSV file...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this after the Control Panel card -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tachometer-alt"></i> Quick Navigation
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'nids_app:packet_list' %}" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-list"></i><br>
+                            <small>View All Packets</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'nids_app:packet_list' %}?attack_type=ddos" class="btn btn-outline-danger btn-lg w-100">
+                            <i class="fas fa-bomb"></i><br>
+                            <small>DDoS Attacks</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'nids_app:packet_list' %}?attack_type=bruteforce" class="btn btn-outline-warning btn-lg w-100">
+                            <i class="fas fa-hammer"></i><br>
+                            <small>Brute Force</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'nids_app:packet_list' %}?attack_type=portscan" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-search"></i><br>
+                            <small>Port Scans</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="stats-number" id="total-packets">0</div>
+            <div class="stats-label">Total Packets</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="stats-number" id="total-flows">0</div>
+            <div class="stats-label">Network Flows</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="stats-number text-danger" id="total-attacks">0</div>
+            <div class="stats-label">Attacks Detected</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="stats-number" id="cpu-usage">0%</div>
+            <div class="stats-label">CPU Usage</div>
+        </div>
+    </div>
+
+    <!-- Recent CSV Analyses -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i> Recent CSV Analyses
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Upload Time</th>
+                                <th>Status</th>
+                                <th>Rows Processed</th>
+                                <th>Attacks Found</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="csv-analyses-table">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No CSV analyses yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- System Status -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-server"></i> System Status
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Capture Status:</strong>
+                        <span id="status-text" class="badge bg-danger">Stopped</span>
+                    </div>
+                    <div class="col-6">
+                        <strong>Memory Usage:</strong>
+                        <span id="memory-usage">0%</span>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <strong>Uptime:</strong>
+                        <span id="uptime">0s</span>
+                    </div>
+                    <div class="col-6">
+                        <strong>Model Status:</strong>
+                        <span class="badge bg-success">Loaded</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Distribution -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie"></i> Attack Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="attack-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Alerts -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-exclamation-triangle"></i> Recent Alerts
+                <span class="badge bg-danger ms-2" id="alert-count">0</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Attack Type</th>
+                                <th>Source IP</th>
+                                <th>Destination IP</th>
+                                <th>Protocol</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alerts-table">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No alerts</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let attackChart;
+
+// Initialize chart
+function initChart() {
+    const ctx = document.getElementById('attack-chart').getContext('2d');
+    attackChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Normal', 'DDoS', 'Brute Force', 'Port Scan', 'SQL Injection'],
+            datasets: [{
+                data: [0, 0, 0, 0, 0],
+                backgroundColor: [
+                    '#28a745',
+                    '#dc3545',
+                    '#fd7e14',
+                    '#ffc107',
+                    '#6f42c1'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            onClick: function(event, elements) {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const attackTypes = ['normal', 'ddos', 'bruteforce', 'portscan', 'sql_injection'];
+                    window.location.href = `/packets/?attack_type=${attackTypes[index]}`;
+                }
+            }
+        }
+    });
+}
+
+// Update statistics
+function updateStats() {
+    fetch('/get-stats/')
+        .then(response => response.json())
+        .then(data => {
+            // Update packet count from database
+            document.getElementById('total-packets').textContent = data.db_packets || 0;
+            document.getElementById('total-flows').textContent = data.db_flows || 0;
+            document.getElementById('total-attacks').textContent = data.total_attacks || 0;
+            document.getElementById('cpu-usage').textContent = (data.cpu_usage || 0).toFixed(1) + '%';
+            document.getElementById('memory-usage').textContent = (data.memory_usage || 0).toFixed(1) + '%';
+            
+            // Update current interface display
+            if (data.debug_info && data.debug_info.selected_interface) {
+                document.getElementById('current-interface').textContent = data.debug_info.selected_interface;
+            }
+            
+            // Update uptime
+            const uptime = data.uptime || 0;
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = Math.floor(uptime % 60);
+            document.getElementById('uptime').textContent = `${hours}h ${minutes}m ${seconds}s`;
+            
+            // Update capture status
+            const statusElement = document.getElementById('capture-status');
+            const statusText = document.getElementById('status-text');
+            const captureText = document.getElementById('capture-text');
+            
+            if (data.is_capturing) {
+                statusElement.className = 'status-indicator status-active';
+                statusText.className = 'badge bg-success';
+                statusText.textContent = 'Running';
+                captureText.textContent = 'Capture Active';
+            } else {
+                statusElement.className = 'status-indicator status-inactive';
+                statusText.className = 'badge bg-danger';
+                statusText.textContent = 'Stopped';
+                captureText.textContent = 'Capture Stopped';
+            }
+        })
+        .catch(error => console.error('Error updating stats:', error));
+}
+
+// Update alerts
+function updateAlerts() {
+    fetch('/get-alerts/')
+        .then(response => response.json())
+        .then(data => {
+            const alertsTable = document.getElementById('alerts-table');
+            const alertCount = document.getElementById('alert-count');
+            
+            alertCount.textContent = data.alerts.length;
+            
+            if (data.alerts.length === 0) {
+                alertsTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No alerts</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.alerts.forEach(alert => {
+                const timestamp = new Date(alert.timestamp).toLocaleString();
+                const confidence = (alert.confidence * 100).toFixed(1);
+                
+                let badgeClass = 'bg-danger';
+                if (alert.attack_type === 'DDoS') badgeClass = 'bg-danger';
+                else if (alert.attack_type === 'Brute Force') badgeClass = 'bg-warning';
+                else if (alert.attack_type === 'Port Scan') badgeClass = 'bg-info';
+                else if (alert.attack_type === 'SQL Injection') badgeClass = 'bg-dark';
+                
+                html += `
+                    <tr>
+                        <td>${timestamp}</td>
+                        <td><span class="badge ${badgeClass}">${alert.attack_type}</span></td>
+                        <td>${alert.src_ip}:${alert.src_port}</td>
+                        <td>${alert.dst_ip}:${alert.dst_port}</td>
+                        <td>${alert.protocol}</td>
+                        <td>${confidence}%</td>
+                    </tr>
+                `;
+            });
+            
+            alertsTable.innerHTML = html;
+        })
+        .catch(error => console.error('Error updating alerts:', error));
+}
+
+// Control functions
+function startCapture() {
+    fetch('/start-capture/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Packet capture started successfully!');
+        } else {
+            alert('Failed to start capture: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error starting capture');
+    });
+}
+
+function stopCapture() {
+    fetch('/stop-capture/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Packet capture stopped successfully!');
+        } else {
+            alert('Failed to stop capture: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error stopping capture');
+    });
+}
+
+function clearAlerts() {
+    fetch('/clear-alerts/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('All alerts cleared!');
+            updateAlerts();
+        } else {
+            alert('Failed to clear alerts: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error clearing alerts');
+    });
+}
+
+function uploadModel() {
+    const fileInput = document.getElementById('model-file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a model file');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('model_file', file);
+    
+    fetch('/upload-model/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Model uploaded successfully!');
+            fileInput.value = '';
+        } else {
+            alert('Failed to upload model: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error uploading model');
+    });
+}
+
+// Update the updateAlerts function to fetch packet data
+function updatePacketStats() {
+    fetch('/get-packet-data/')
+        .then(response => response.json())
+        .then(data => {
+            // Update chart with classification stats
+            if (attackChart && data.classification_stats) {
+                const stats = data.classification_stats;
+                attackChart.data.datasets[0].data = [
+                    stats.normal || 0,
+                    stats.ddos || 0,
+                    stats.bruteforce || 0,
+                    stats.portscan || 0,
+                    stats.sql_injection || 0
+                ];
+                attackChart.update();
+            }
+        })
+        .catch(error => console.error('Error updating packet stats:', error));
+}
+
+// CSV Analysis functions
+function uploadCSV() {
+    const fileInput = document.getElementById('csv-file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a CSV file');
+        return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a valid CSV file');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('csv_file', file);
+    
+    // Show status
+    const statusDiv = document.getElementById('csv-analysis-status');
+    const statusText = document.getElementById('csv-status-text');
+    statusDiv.style.display = 'block';
+    statusText.textContent = 'Uploading and processing CSV file...';
+    
+    fetch('/upload-csv/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusText.innerHTML = `<i class="fas fa-check"></i> CSV uploaded successfully! Analysis ID: ${data.analysis_id}`;
+            statusDiv.querySelector('.alert').className = 'alert alert-success';
+            fileInput.value = '';
+            
+            // Start polling for analysis completion
+            pollAnalysisStatus(data.analysis_id);
+        } else {
+            statusText.innerHTML = `<i class="fas fa-times"></i> Failed to upload CSV: ${data.message}`;
+            statusDiv.querySelector('.alert').className = 'alert alert-danger';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusText.innerHTML = `<i class="fas fa-times"></i> Error uploading CSV file`;
+        statusDiv.querySelector('.alert').className = 'alert alert-danger';
+    });
+}
+
+function pollAnalysisStatus(analysisId) {
+    const checkStatus = () => {
+        fetch('/get-csv-analysis/')
+            .then(response => response.json())
+            .then(data => {
+                const analysis = data.analyses.find(a => a.id === analysisId);
+                if (analysis) {
+                    const statusDiv = document.getElementById('csv-analysis-status');
+                    const statusText = document.getElementById('csv-status-text');
+                    
+                    if (analysis.status === 'completed') {
+                        statusText.innerHTML = `<i class="fas fa-check"></i> Analysis completed! 
+                            <a href="/csv-analysis/${analysisId}/" class="btn btn-sm btn-primary ms-2">View Results</a>`;
+                        statusDiv.querySelector('.alert').className = 'alert alert-success';
+                        updateCSVAnalysesTable();
+                    } else if (analysis.status === 'failed') {
+                        statusText.innerHTML = `<i class="fas fa-times"></i> Analysis failed: ${analysis.error_message}`;
+                        statusDiv.querySelector('.alert').className = 'alert alert-danger';
+                    } else {
+                        // Still processing, continue polling
+                        setTimeout(checkStatus, 2000);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error checking analysis status:', error);
+            });
+    };
+    
+    setTimeout(checkStatus, 2000);
+}
+
+function updateCSVAnalysesTable() {
+    fetch('/get-csv-analysis/')
+        .then(response => response.json())
+        .then(data => {
+            const table = document.getElementById('csv-analyses-table');
+            
+            if (data.analyses.length === 0) {
+                table.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No CSV analyses yet</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.analyses.forEach(analysis => {
+                const uploadTime = new Date(analysis.upload_timestamp).toLocaleString();
+                const totalAttacks = analysis.ddos_count + analysis.bruteforce_count + 
+                                   analysis.portscan_count + analysis.sql_injection_count;
+                
+                let statusBadge = '';
+                if (analysis.status === 'completed') {
+                    statusBadge = '<span class="badge bg-success">Completed</span>';
+                } else if (analysis.status === 'failed') {
+                    statusBadge = '<span class="badge bg-danger">Failed</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-warning">Processing</span>';
+                }
+                
+                html += `
+                    <tr>
+                        <td>${analysis.filename}</td>
+                        <td>${uploadTime}</td>
+                        <td>${statusBadge}</td>
+                        <td>${analysis.processed_rows}/${analysis.total_rows}</td>
+                        <td><span class="badge bg-danger">${totalAttacks}</span></td>
+                        <td>
+                            ${analysis.status === 'completed' ? 
+                                `<a href="/csv-analysis/${analysis.id}/" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>` : 
+                                '<span class="text-muted">-</span>'
+                            }
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            table.innerHTML = html;
+        })
+        .catch(error => console.error('Error updating CSV analyses table:', error));
+}
+
+// Add this function before the event listeners
+function testCapture() {
+    fetch('/test-capture/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Capture test results:', data);
+            
+            let message = 'Capture Test Results:\n\n';
+            
+            if (data.available_interfaces) {
+                message += `Available Interfaces: ${data.available_interfaces.join(', ')}\n\n`;
+            }
+            
+            if (data.permission_test) {
+                message += `Permission Test: ${data.permission_test}\n\n`;
+            }
+            
+            if (data.interface_tests) {
+                message += 'Interface Tests:\n';
+                for (const [iface, result] of Object.entries(data.interface_tests)) {
+                    message += `  ${iface}: ${result.test_passed ? 'PASSED' : 'FAILED'}`;
+                    if (result.error) {
+                        message += ` (${result.error})`;
+                    } else if (result.packets_captured !== undefined) {
+                        message += ` (${result.packets_captured} packets)`;
+                    }
+                    message += '\n';
+                }
+            }
+            
+            if (data.error) {
+                message += `\nError: ${data.error}`;
+                if (data.suggestion) {
+                    message += `\nSuggestion: ${data.suggestion}`;
+                }
+            }
+            
+            alert(message);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error running capture test: ' + error);
+        });
+}
+
+function startWlanCapture() {
+    fetch('/start-wlan-capture/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Packet capture started on wlan0 successfully!`);
+            document.getElementById('current-interface').textContent = 'wlan0';
+        } else {
+            alert('Failed to start wlan0 capture: ' + data.message);
+            if (data.available_interfaces) {
+                alert('Available interfaces: ' + data.available_interfaces.join(', '));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error starting wlan0 capture');
+    });
+}
+
+// Event listeners
+document.getElementById('start-capture').addEventListener('click', startCapture);
+document.getElementById('stop-capture').addEventListener('click', stopCapture);
+document.getElementById('clear-alerts').addEventListener('click', clearAlerts);
+document.getElementById('upload-model').addEventListener('click', uploadModel);
+document.getElementById('upload-csv').addEventListener('click', uploadCSV);
+document.getElementById('view-csv-analyses').addEventListener('click', function() {
+    updateCSVAnalysesTable();
+});
+// Add this event listener with the others
+document.getElementById('test-capture').addEventListener('click', testCapture);
+document.getElementById('start-wlan-capture').addEventListener('click', startWlanCapture);
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    initChart();
+    updateStats();
+    updateAlerts();
+    updateCSVAnalysesTable();
+    
+    // Update every 5 seconds
+    setInterval(() => {
+        updateStats();
+        updateAlerts();
+        updatePacketStats();
+    }, 5000);
+
+    // Update CSV analyses every 10 seconds
+    setInterval(updateCSVAnalysesTable, 10000);
+});
+</script>
+{% endblock %}

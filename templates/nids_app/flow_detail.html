@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+
+{% block title %}Flow Detail - NIDS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Flow Overview -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-stream"></i> Flow Overview
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Flow ID:</th>
+                        <td><code>{{ flow.flow_id }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>Source:</th>
+                        <td>{{ flow.src_ip }}:{{ flow.src_port }}</td>
+                    </tr>
+                    <tr>
+                        <th>Destination:</th>
+                        <td>{{ flow.dst_ip }}:{{ flow.dst_port }}</td>
+                    </tr>
+                    <tr>
+                        <th>Protocol:</th>
+                        <td><span class="badge bg-info">{{ flow.protocol }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Duration:</th>
+                        <td>{{ flow.flow_duration|floatformat:3 }} seconds</td>
+                    </tr>
+                    <tr>
+                        <th>Total Packets:</th>
+                        <td>{{ flow_stats.total_packets }}</td>
+                    </tr>
+                    <tr>
+                        <th>Total Bytes:</th>
+                        <td>{{ flow_stats.total_bytes|filesizeformat }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classification Results -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-brain"></i> AI Classification Results
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if flow.prediction == 0 %}
+                        <span class="badge bg-success fs-5">Normal Traffic</span>
+                    {% elif flow.prediction == 1 %}
+                        <span class="badge bg-danger fs-5">DDoS Attack</span>
+                    {% elif flow.prediction == 2 %}
+                        <span class="badge bg-warning fs-5">Brute Force Attack</span>
+                    {% elif flow.prediction == 3 %}
+                        <span class="badge bg-info fs-5">Port Scan Attack</span>
+                    {% elif flow.prediction == 4 %}
+                        <span class="badge bg-dark fs-5">SQL Injection Attack</span>
+                    {% endif %}
+                </div>
+                
+                <table class="table table-sm">
+                    <tr>
+                        <th>Confidence:</th>
+                        <td>{{ flow.confidence|floatformat:3 }}</td>
+                    </tr>
+                    <tr>
+                        <th>Is Attack:</th>
+                        <td>
+                            {% if flow.is_attack %}
+                                <span class="badge bg-danger">Yes</span>
+                            {% else %}
+                                <span class="badge bg-success">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+
+                {% if flow.classification %}
+                <h6>All Class Probabilities:</h6>
+                <div class="mb-2">
+                    <small>Normal: {{ flow.classification.prob_normal|floatformat:3 }}</small>
+                    <div class="progress mb-1" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: {{ flow.classification.prob_normal|floatformat:1 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small>DDoS: {{ flow.classification.prob_ddos|floatformat:3 }}</small>
+                    <div class="progress mb-1" style="height: 10px;">
+                        <div class="progress-bar bg-danger" style="width: {{ flow.classification.prob_ddos|floatformat:1 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small>Brute Force: {{ flow.classification.prob_bruteforce|floatformat:3 }}</small>
+                    <div class="progress mb-1" style="height: 10px;">
+                        <div class="progress-bar bg-warning" style="width: {{ flow.classification.prob_bruteforce|floatformat:1 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small>Port Scan: {{ flow.classification.prob_portscan|floatformat:3 }}</small>
+                    <div class="progress mb-1" style="height: 10px;">
+                        <div class="progress-bar bg-info" style="width: {{ flow.classification.prob_portscan|floatformat:1 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small>SQL Injection: {{ flow.classification.prob_sql_injection|floatformat:3 }}</small>
+                    <div class="progress mb-1" style="height: 10px;">
+                        <div class="progress-bar bg-dark" style="width: {{ flow.classification.prob_sql_injection|floatformat:1 }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flow Statistics -->
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Flow Statistics
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-primary">{{ flow_stats.total_packets }}</h5>
+                            <small class="text-muted">Total Packets</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-success">{{ flow_stats.forward_packets }}</h5>
+                            <small class="text-muted">Forward Packets</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-warning">{{ flow_stats.backward_packets }}</h5>
+                            <small class="text-muted">Backward Packets</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-info">{{ flow_stats.total_bytes|filesizeformat }}</h5>
+                            <small class="text-muted">Total Bytes</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-secondary">{{ flow_stats.duration|floatformat:2 }}s</h5>
+                            <small class="text-muted">Duration</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <h5 class="text-dark">{{ flow_stats.avg_packet_size|floatformat:0 }}</h5>
+                            <small class="text-muted">Avg Packet Size</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Packets in Flow -->
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> Packets in Flow ({{ packets.count }})
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Direction</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Size</th>
+                                <th>TCP Flags</th>
+                                <th>Anomaly Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for packet in packets %}
+                            <tr class="{% if packet.is_suspicious %}table-danger{% endif %}">
+                                <td>{{ packet.timestamp|date:"H:i:s.u" }}</td>
+                                <td>
+                                    {% if packet.is_forward %}
+                                        <span class="badge bg-success">→ Forward</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">← Backward</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ packet.src_ip }}:{{ packet.src_port }}</td>
+                                <td>{{ packet.dst_ip }}:{{ packet.dst_port }}</td>
+                                <td>{{ packet.packet_size }} bytes</td>
+                                <td>
+                                    {% if packet.tcp_flags %}
+                                        <span class="badge bg-secondary">{{ packet.tcp_flags }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 15px;">
+                                        <div class="progress-bar {% if packet.anomaly_score > 0.7 %}bg-danger{% elif packet.anomaly_score > 0.3 %}bg-warning{% else %}bg-success{% endif %}" 
+                                             style="width: {{ packet.anomaly_score|floatformat:1 }}%">
+                                            {{ packet.anomaly_score|floatformat:2 }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="{% url 'nids_app:packet_detail' packet.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No packets found in this flow</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts for this Flow -->
+{% if alerts %}
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-exclamation-triangle"></i> Alerts for this Flow
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Attack Type</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts %}
+                            <tr>
+                                <td>{{ alert.timestamp }}</td>
+                                <td>
+                                    <span class="badge bg-danger">{{ alert.get_attack_type_display }}</span>
+                                </td>
+                                <td>{{ alert.confidence|floatformat:3 }}</td>
+                                <td>
+                                    {% if alert.acknowledged %}
+                                        <span class="badge bg-success">Acknowledged</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row mt-3">
+    <div class="col-md-12 text-center">
+        <a href="{% url 'nids_app:packet_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Packets
+        </a>
+        <a href="{% url 'nids_app:dashboard' %}" class="btn btn-primary">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        {% if flow.is_attack %}
+        <button class="btn btn-danger" onclick="blockIP('{{ flow.src_ip }}')">
+            <i class="fas fa-ban"></i> Block Source IP
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function blockIP(ip) {
+    if (confirm(`Are you sure you want to block IP ${ip}? This action should be performed at the firewall level.`)) {
+        alert(`IP ${ip} should be blocked at the firewall. This is a simulation - implement actual blocking logic as needed.`);
+    }
+}
+</script>
+{% endblock %}

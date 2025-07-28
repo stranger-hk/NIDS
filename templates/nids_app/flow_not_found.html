@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Flow Not Found - NIDS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                <h2>Flow Not Found</h2>
+                <p class="lead">The network flow with ID {{ flow_id }} could not be found.</p>
+                <p>This flow may have been removed from the database or the ID may be incorrect.</p>
+                <a href="{% url 'nids_app:packet_list' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Packet List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

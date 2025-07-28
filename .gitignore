@@ -1,0 +1,42 @@
+# Python bytecode and cache
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+.Python
+
+# Django files
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# Environment variables
+.env
+
+# VS Code settings
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Migrations (optional)
+**/migrations/*.pyc
+**/migrations/__pycache__/
+
+# Ignore large model files not tracked via Git LFS
+models/best_svm_model_fast_robust_20.pkl
+
+# Git LFS pointer metadata
+.gitattributes

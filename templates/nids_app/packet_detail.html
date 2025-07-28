@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Packet Detail - NIDS{% endblock %}
+
+{% block content %}
+<div class="packet-detail-content">
+    <div class="row">
+        <!-- Packet Overview -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> Packet Overview
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Timestamp:</th>
+                            <td>{{ packet.timestamp }}</td>
+                        </tr>
+                        <tr>
+                            <th>Source:</th>
+                            <td>{{ packet.src_ip }}:{{ packet.src_port }}</td>
+                        </tr>
+                        <tr>
+                            <th>Destination:</th>
+                            <td>{{ packet.dst_ip }}:{{ packet.dst_port }}</td>
+                        </tr>
+                        <tr>
+                            <th>Protocol:</th>
+                            <td><span class="badge bg-info">{{ packet.protocol }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>Size:</th>
+                            <td>{{ packet.packet_size }} bytes</td>
+                        </tr>
+                        <tr>
+                            <th>Direction:</th>
+                            <td>
+                                {% if packet.is_forward %}
+                                    <span class="badge bg-success">Forward</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Backward</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classification Results -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-brain"></i> AI Classification
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Prediction:</th>
+                            <td>
+                                {% if packet.flow.prediction == 0 %}
+                                    <span class="badge bg-success">Normal</span>
+                                {% elif packet.flow.prediction == 1 %}
+                                    <span class="badge bg-danger">DDoS Attack</span>
+                                {% elif packet.flow.prediction == 2 %}
+                                    <span class="badge bg-warning">Brute Force</span>
+                                {% elif packet.flow.prediction == 3 %}
+                                    <span class="badge bg-info">Port Scan</span>
+                                {% elif packet.flow.prediction == 4 %}
+                                    <span class="badge bg-dark">SQL Injection</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Confidence:</th>
+                            <td>{{ packet.flow.confidence|floatformat:3 }}</td>
+                        </tr>
+                        <tr>
+                            <th>Anomaly Score:</th>
+                            <td>{{ packet.anomaly_score|floatformat:3 }}</td>
+                        </tr>
+                        <tr>
+                            <th>Flow ID:</th>
+                            <td><code>{{ packet.flow.flow_id }}</code></td>
+                        </tr>
+                    </table>
+                    
+                    {% if packet.flow.classification %}
+                    <h6>All Class Probabilities:</h6>
+                    <div class="progress-stacked mb-2">
+                        <div class="progress" role="progressbar" style="width: {{ packet.flow.classification.prob_normal|floatformat:1 }}%">
+                            <div class="progress-bar bg-success">Normal</div>
+                        </div>
+                        <div class="progress" role="progressbar" style="width: {{ packet.flow.classification.prob_ddos|floatformat:1 }}%">
+                            <div class="progress-bar bg-danger">DDoS</div>
+                        </div>
+                        <div class="progress" role="progressbar" style="width: {{ packet.flow.classification.prob_bruteforce|floatformat:1 }}%">
+                            <div class="progress-bar bg-warning">Brute Force</div>
+                        </div>
+                        <div class="progress" role="progressbar" style="width: {{ packet.flow.classification.prob_portscan|floatformat:1 }}%">
+                            <div class="progress-bar bg-info">Port Scan</div>
+                        </div>
+                        <div class="progress" role="progressbar" style="width: {{ packet.flow.classification.prob_sql_injection|floatformat:1 }}%">
+                            <div class="progress-bar bg-dark">SQL Injection</div>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Normal: {{ packet.flow.classification.prob_normal|floatformat:3 }} | 
+                        DDoS: {{ packet.flow.classification.prob_ddos|floatformat:3 }} | 
+                        Brute Force: {{ packet.flow.classification.prob_bruteforce|floatformat:3 }} | 
+                        Port Scan: {{ packet.flow.classification.prob_portscan|floatformat:3 }} | 
+                        SQL Injection: {{ packet.flow.classification.prob_sql_injection|floatformat:3 }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TCP/UDP Details -->
+    {% if packet.tcp_flags or packet.tcp_window_size %}
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-network-wired"></i> TCP/UDP Details
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if packet.tcp_flags %}
+                        <div class="col-md-3">
+                            <strong>TCP Flags:</strong><br>
+                            <span class="badge bg-secondary">{{ packet.tcp_flags }}</span>
+                        </div>
+                        {% endif %}
+                        {% if packet.tcp_window_size %}
+                        <div class="col-md-3">
+                            <strong>Window Size:</strong><br>
+                            {{ packet.tcp_window_size }}
+                        </div>
+                        {% endif %}
+                        {% if packet.tcp_seq_num %}
+                        <div class="col-md-3">
+                            <strong>Sequence Number:</strong><br>
+                            {{ packet.tcp_seq_num }}
+                        </div>
+                        {% endif %}
+                        {% if packet.tcp_ack_num %}
+                        <div class="col-md-3">
+                            <strong>ACK Number:</strong><br>
+                            {{ packet.tcp_ack_num }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Raw Packet Data -->
+    {% if packet.raw_data %}
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-code"></i> Raw Packet Data
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3" style="max-height: 300px; overflow-y: auto;"><code>{{ packet.raw_data }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Related Packets in Flow -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-stream"></i> Related Packets in Flow
+                    <a href="{% url 'nids_app:flow_detail' packet.flow.id %}" class="btn btn-sm btn-primary float-end">
+                        <i class="fas fa-external-link-alt"></i> View Full Flow
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Direction</th>
+                                    <th>Size</th>
+                                    <th>TCP Flags</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for related_packet in related_packets %}
+                                <tr {% if related_packet.id == packet.id %}class="table-warning"{% endif %}>
+                                    <td>{{ related_packet.timestamp|date:"H:i:s.u" }}</td>
+                                    <td>
+                                        {% if related_packet.is_forward %}
+                                            <span class="badge bg-success">→</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">←</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ related_packet.packet_size }} bytes</td>
+                                    <td>
+                                        {% if related_packet.tcp_flags %}
+                                            <small>{{ related_packet.tcp_flags }}</small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if related_packet.id != packet.id %}
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showPacketDetail({{ related_packet.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% else %}
+                                        <span class="badge bg-warning">Current</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-3">
+        <div class="col-md-12 text-center">
+            <a href="{% url 'nids_app:packet_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Packet List
+            </a>
+            <a href="{% url 'nids_app:flow_detail' packet.flow.id %}" class="btn btn-primary">
+                <i class="fas fa-stream"></i> View Full Flow
+            </a>
+            {% if packet.flow.is_attack %}
+            <button class="btn btn-danger" onclick="alert('Attack detected! Consider blocking this IP or investigating further.')">
+                <i class="fas fa-shield-alt"></i> Take Action
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
